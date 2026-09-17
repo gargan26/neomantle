@@ -12,6 +12,7 @@ license="MIT"
 Shared code for Slime Knights mods and others. Neo Mantle is vancevoj's NeoForge 1.21.1 port of Slime Knights' Mantle ${mod_version}; it was inspired by their work and nearly all of the design and programming belong to them. Required by Neo Tinkers.
     '''
     displayURL="https://github.com/vancevoj/Mantle"
+    logoFile="Mantle.png"
 
 # Compatibility patch: tolerate duplicate serialized names in extensible enums (StringRepresentable),
 # preventing crashes when another mod registers colliding enum values (e.g. Petrolpark's ItemDisplayContext).
@@ -29,5 +30,12 @@ Shared code for Slime Knights mods and others. Neo Mantle is vancevoj's NeoForge
     modId="minecraft"
     type="required"
     versionRange="${minecraft_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.mantle]]
+    modId="jei"
+    type="optional"
+    versionRange="${jei_range}"
     ordering="NONE"
     side="BOTH"

@@ -18,6 +18,7 @@ val parchmentMinecraft = providers.gradleProperty("parchment_minecraft")
 val parchmentVersion = providers.gradleProperty("parchment_version")
 
 val jeiVersion = providers.gradleProperty("jei_version")
+val jeiRange = providers.gradleProperty("jei_range")
 
 plugins {
     idea
@@ -110,7 +111,8 @@ tasks.processResources {
         "fork_version"    to forkVersion.get(),
         "loader_range"    to loaderRange.get(),
         "minecraft_range" to mcRange.get(),
-        "neoforge_range"  to neoForgeRange.get()
+        "neoforge_range"  to neoForgeRange.get(),
+        "jei_range"       to jeiRange.get()
     )
     inputs.properties(replaceProperties)
 

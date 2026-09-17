@@ -3,7 +3,9 @@ package slimeknights.mantle.recipe.helper;
 import com.google.gson.JsonObject;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.tags.TagKey;
@@ -205,7 +207,10 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
           return FluidStack.EMPTY;
         }
         cachedResult = new FluidStack(preference.orElseThrow(), amount);
-        // TODO(neoport): FluidStack no longer takes legacy NBT; tag-preference fluid outputs with NBT lose that NBT
+
+        if (nbt != null) {
+          cachedResult.applyComponents(DataComponentPatch.CODEC.parse(NbtOps.INSTANCE, nbt).result().orElse(DataComponentPatch.EMPTY));
+        }
       }
       return cachedResult;
     }
@@ -268,7 +273,7 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
       if (!buffer.readBoolean()) {
         return FluidOutput.EMPTY;
       }
-      return fromStack(stack.decode(buffer, context));
+      return fromStack(FluidStack.STREAM_CODEC.decode((RegistryFriendlyByteBuf) buffer));
     }
 
     @Override
@@ -277,7 +282,7 @@ public abstract class FluidOutput implements Supplier<FluidStack> {
       boolean present = !out.isEmpty();
       buffer.writeBoolean(present);
       if (present) {
-        stack.encode(buffer, out);
+        FluidStack.STREAM_CODEC.encode((RegistryFriendlyByteBuf) buffer, out);
       }
     }
 
