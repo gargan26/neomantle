@@ -48,7 +48,12 @@ public class EntityIngredientHelper implements IIngredientHelper<EntityInput> {
 
   @Override
   public String getUniqueId(EntityInput type, UidContext context) {
-    return "mantle:entity:" + getResourceLocation(type);
+    return getResourceLocation(type).toString();
+  }
+
+  @Override
+  public Object getUid(EntityInput ingredient, UidContext context) {
+    return ingredient.type();
   }
 
   @Override
