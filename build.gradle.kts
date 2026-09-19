@@ -49,6 +49,13 @@ repositories {
     }
 }
 
+idea {
+    module {
+        isDownloadJavadoc = true
+        isDownloadSources = true
+    }
+}
+
 neoForge {
     version = neoForgeVersion.get()
 
