@@ -2,15 +2,13 @@ package slimeknights.mantle.plugin.jei.entity;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import lombok.RequiredArgsConstructor;
-// TODO(neoport): JEI dep disabled
+import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.ingredients.IIngredientRenderer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -19,8 +17,12 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import slimeknights.mantle.Mantle;
+import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.recipe.ingredient.EntityIngredient;
+import slimeknights.mantle.recipe.ingredient.EntityIngredient.EntityInput;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -55,6 +57,20 @@ public class EntityIngredientRenderer implements IIngredientRenderer<EntityIngre
     return size;
   }
 
+  private static void renderEntityInInventoryFollowsMouse(GuiGraphics guiGraphics, int i, int j, int k, float f, float g, LivingEntity livingEntity) {
+    float h = (float)Math.atan(f / 40.0F);
+    float l = (float)Math.atan(g / 40.0F);
+    Quaternionf quaternionf = new Quaternionf().rotateZ((float) Math.PI);
+    Quaternionf quaternionf2 = new Quaternionf().rotateX(l * 20.0F * (float) (Math.PI / 180.0));
+    quaternionf.mul(quaternionf2);
+    livingEntity.yBodyRot = 180.0F + h * 20.0F;
+    livingEntity.setYRot(180.0F + h * 40.0F);
+    livingEntity.setXRot(-l * 20.0F);
+    livingEntity.yHeadRot = livingEntity.getYRot();
+    livingEntity.yHeadRotO = livingEntity.getYRot();
+    InventoryScreen.renderEntityInInventory(guiGraphics, i, j, k, new Vector3f(), quaternionf, quaternionf2, livingEntity);
+  }
+
   @Override
   public void render(GuiGraphics graphics, @Nullable EntityIngredient.EntityInput input) {
     if (input != null) {
@@ -81,10 +97,7 @@ public class EntityIngredientRenderer implements IIngredientRenderer<EntityIngre
           }
           // catch exceptions drawing the entity to be safe, any caught exceptions blacklist the entity
           try {
-            // 1.21: renderEntityInInventoryFollowsMouse now takes a bounding box (x1,y1,x2,y2) instead of a centre
-            // point; the entity anchors at the bottom-centre of the box, so (0,0,size,size) keeps the old (size/2,
-            // size) anchor. mouseX/mouseY at the anchor give a forward-facing entity (no live mouse-follow needed here).
-            InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, 0, 0, size, size, scale, 0.0F, size / 2f, size, livingEntity);
+            renderEntityInInventoryFollowsMouse(graphics, size / 2, size, scale, 0, 10, livingEntity);
             return;
           } catch (Exception e) {
             Mantle.logger.error("Error drawing entity " + BuiltInRegistries.ENTITY_TYPE.getKey(type), e);

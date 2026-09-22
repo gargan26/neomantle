@@ -18,12 +18,13 @@ val parchmentMinecraft = providers.gradleProperty("parchment_minecraft")
 val parchmentVersion = providers.gradleProperty("parchment_version")
 
 val jeiVersion = providers.gradleProperty("jei_version")
+val jeiRange = providers.gradleProperty("jei_range")
 
 plugins {
     idea
     eclipse
     `maven-publish`
-    id("net.neoforged.moddev") version "2.0.141"
+    id("net.neoforged.moddev") version "2.0.147"
     id("io.freefair.lombok") version "8.10"
 }
 
@@ -45,6 +46,13 @@ repositories {
     mavenCentral()
     maven("https://maven.blamejared.com/") {
         name = "BlameJared (JEI, CraftTweaker, etc.)"
+    }
+}
+
+idea {
+    module {
+        isDownloadJavadoc = true
+        isDownloadSources = true
     }
 }
 
@@ -110,7 +118,8 @@ tasks.processResources {
         "fork_version"    to forkVersion.get(),
         "loader_range"    to loaderRange.get(),
         "minecraft_range" to mcRange.get(),
-        "neoforge_range"  to neoForgeRange.get()
+        "neoforge_range"  to neoForgeRange.get(),
+        "jei_range"       to jeiRange.get()
     )
     inputs.properties(replaceProperties)
 
