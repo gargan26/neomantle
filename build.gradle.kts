@@ -25,7 +25,7 @@ plugins {
     eclipse
     `maven-publish`
     id("net.neoforged.moddev") version "2.0.147"
-    id("io.freefair.lombok") version "8.10"
+    id("io.freefair.lombok") version "9.7.0"
 }
 
 group = "slimeknights.mantle"
