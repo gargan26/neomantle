@@ -1,6 +1,5 @@
 package slimeknights.mantle.plugin.jei.entity;
 
-// TODO(neoport): JEI dep disabled
 import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.subtypes.UidContext;
