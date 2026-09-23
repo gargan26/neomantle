@@ -1,26 +1,26 @@
 package slimeknights.mantle.loot;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.mojang.serialization.JsonOps;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.level.storage.loot.LootTable;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.common.NeoForge;
-import com.google.gson.JsonElement;
-import com.mojang.serialization.JsonOps;
-import net.minecraft.resources.RegistryOps;
 import net.neoforged.neoforge.common.conditions.ICondition;
-import javax.annotation.Nullable;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.LootTableLoadEvent;
-import net.neoforged.bus.api.EventPriority;
 import slimeknights.mantle.Mantle;
 import slimeknights.mantle.data.listener.IEarlyReloadListener;
 import slimeknights.mantle.loot.LootTableInjection.LootPoolInjection;
 import slimeknights.mantle.util.JsonHelper;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Collections;

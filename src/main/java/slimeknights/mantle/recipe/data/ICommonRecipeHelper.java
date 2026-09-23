@@ -21,7 +21,6 @@ import slimeknights.mantle.registration.object.MetalItemObject;
 import slimeknights.mantle.registration.object.WallBuildingBlockObject;
 import slimeknights.mantle.registration.object.WoodBlockObject;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 

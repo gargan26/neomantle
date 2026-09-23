@@ -18,7 +18,7 @@ import net.neoforged.neoforge.client.model.data.ModelData;
 import org.apache.commons.lang3.math.NumberUtils;
 import slimeknights.mantle.Mantle;
 
-import java.awt.Color;
+import java.awt.*;
 import java.util.function.ToIntFunction;
 
 /** Helper for getting the average color of a texture */

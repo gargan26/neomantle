@@ -2,7 +2,6 @@ package slimeknights.mantle.plugin.jei.entity;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import lombok.RequiredArgsConstructor;
-import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.ingredients.IIngredientRenderer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -20,9 +19,7 @@ import net.minecraft.world.level.Level;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import slimeknights.mantle.Mantle;
-import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.recipe.ingredient.EntityIngredient;
-import slimeknights.mantle.recipe.ingredient.EntityIngredient.EntityInput;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

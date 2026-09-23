@@ -3,12 +3,12 @@ package slimeknights.mantle.registration.adapter;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.types.Type;
 import net.minecraft.Util;
+import net.minecraft.core.Registry;
 import net.minecraft.util.datafix.fixes.References;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.entity.BlockEntityType.BlockEntitySupplier;
-import net.minecraft.core.Registry;
 import slimeknights.mantle.registration.object.EnumObject;
 
 import javax.annotation.Nullable;

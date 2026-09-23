@@ -1,9 +1,9 @@
 package slimeknights.mantle.client.book;
 
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
-import net.minecraft.nbt.CompoundTag;
 
 import javax.annotation.Nullable;
 
