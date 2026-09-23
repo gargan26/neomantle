@@ -10,12 +10,15 @@ import com.mojang.serialization.MapLike;
 import com.mojang.serialization.RecordBuilder;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.neoforged.neoforge.common.CommonHooks;
 import slimeknights.mantle.data.loadable.field.ContextKey;
 import slimeknights.mantle.data.loadable.field.LoadableField;
 import slimeknights.mantle.data.loadable.primitive.StringLoadable;
@@ -25,7 +28,7 @@ import slimeknights.mantle.util.typed.TypedMapBuilder;
 
 import javax.annotation.Nullable;
 import java.util.Map.Entry;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -70,11 +73,18 @@ public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRec
 
   /**
    * Builds the loadable context for a recipe parse. Adds the recipe serializer (and, for type aware serializers, the
-   * recipe type and typed serializer) plus the id and debug info.
-   * @param id  Recipe id. In 1.21 this is a synthetic stable id, as the real id is not available during decode.
+   * recipe type and typed serializer) plus the id, debug info, and registry access when available.
+   * @param id          Recipe id. In 1.21 this is a synthetic stable id, as the real id is not available during decode.
+   * @param registries  Registry access resolved for this parse, or {@code null} if none was available (e.g. plain
+   *                    {@link JsonOps} callers such as some datagen paths). Populates {@link ContextKey#REGISTRIES}
+   *                    so loadables like {@code Loadables.ENCHANTMENT} can resolve dynamic-registry references.
    */
-  protected TypedMapBuilder buildContext(ResourceLocation id) {
-    return TypedMapBuilder.builder().put(ContextKey.ID, id).put(ContextKey.DEBUG, "Recipe " + id).put(SERIALIZER, this);
+  protected TypedMapBuilder buildContext(ResourceLocation id, @Nullable HolderLookup.Provider registries) {
+    TypedMapBuilder builder = TypedMapBuilder.builder().put(ContextKey.ID, id).put(ContextKey.DEBUG, "Recipe " + id).put(SERIALIZER, this);
+    if (registries != null) {
+      builder.put(ContextKey.REGISTRIES, registries);
+    }
+    return builder;
   }
 
   /** Namespace for synthetic recipe ids, the registry name of this serializer if available */
@@ -96,8 +106,8 @@ public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRec
   @Override
   public MapCodec<T> codec() {
     if (codec == null) {
-      // pass a context builder so decode can supply the ID/SERIALIZER/TYPE/TYPED_SERIALIZER context fields
-      codec = new LoadableMapCodec<>(loadable, json -> buildContext(syntheticId(json.toString().hashCode())).build());
+      // pass a context builder so decode can supply the ID/SERIALIZER/TYPE/TYPED_SERIALIZER/REGISTRIES context fields
+      codec = new LoadableMapCodec<>(loadable, (json, registries) -> buildContext(syntheticId(json.toString().hashCode()), registries).build());
     }
     return codec;
   }
@@ -107,7 +117,8 @@ public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRec
     // network decode also pulls ID/SERIALIZER from context (see ContextField.decode), so build context here too.
     // the buffer is opaque (no recipe id is sent), so derive a synthetic id from the read position, which is stable
     // for a given recipe given recipes sync in a deterministic order. nothing in game logic keys off this id.
-    return loadable.decode(buffer, buildContext(syntheticId(buffer.readerIndex())).build());
+    // RegistryFriendlyByteBuf always carries live registry access, unlike the JSON decode path.
+    return loadable.decode(buffer, buildContext(syntheticId(buffer.readerIndex()), buffer.registryAccess()).build());
   }
 
   @Override
@@ -124,11 +135,12 @@ public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRec
   protected static class LoadableMapCodec<T> extends MapCodec<T> {
     private final RecordLoadable<T> loadable;
     /**
-     * Builds the loadable context from the parsed JSON. Recipe serializers pass a builder supplying the
-     * ID/SERIALIZER/TYPE/TYPED_SERIALIZER context; other users (e.g. custom ingredients) pass null for no context.
+     * Builds the loadable context from the parsed JSON and any registry access resolved from the decode ops.
+     * Recipe serializers pass a builder supplying the ID/SERIALIZER/TYPE/TYPED_SERIALIZER/REGISTRIES context;
+     * other users (e.g. custom ingredients) pass null for no context.
      */
     @Nullable
-    private final Function<JsonObject,TypedMap> contextBuilder;
+    private final BiFunction<JsonObject, HolderLookup.Provider, TypedMap> contextBuilder;
 
     @Override
     public <O> Stream<O> keys(DynamicOps<O> ops) {
@@ -146,10 +158,17 @@ public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRec
             json.add(key, ops.convertTo(JsonOps.INSTANCE, pair.getSecond()));
           }
         });
+        // recipes are parsed through RegistryOps (see RecipeManager#fromJson), which carries the datapack registry
+        // access needed to resolve dynamic-registry references (enchantments, potions, etc.) in loadable fields.
+        // Unwrap it here since it is otherwise discarded once we convert everything to plain JsonOps above.
+        HolderLookup.Provider registries = null;
+        if (ops instanceof RegistryOps<O> registryOps) {
+          registries = CommonHooks.extractLookupProvider(registryOps);
+        }
         // build the loadable context: the real recipe id is not available during 1.21 decode, so the recipe serializer
         // derives a stable synthetic id from the json contents. this gives required context fields (ID, SERIALIZER,
-        // TYPE, TYPED_SERIALIZER) a non-null value, keeping recipes that require them loading 1:1 with the original.
-        TypedMap context = contextBuilder != null ? contextBuilder.apply(json) : TypedMap.EMPTY;
+        // TYPE, TYPED_SERIALIZER, REGISTRIES) a non-null value, keeping recipes that require them loading 1:1 with the original.
+        TypedMap context = contextBuilder != null ? contextBuilder.apply(json, registries) : TypedMap.EMPTY;
         return DataResult.success(loadable.deserialize(json, context));
       } catch (RuntimeException e) {
         return DataResult.error(e::getMessage);
@@ -179,8 +198,8 @@ public class LoadableRecipeSerializer<T extends Recipe<?>> implements LoggingRec
     }
 
     @Override
-    protected TypedMapBuilder buildContext(ResourceLocation id) {
-      return super.buildContext(id).put(TYPE, getType()).put(TYPED_SERIALIZER, this);
+    protected TypedMapBuilder buildContext(ResourceLocation id, @Nullable HolderLookup.Provider registries) {
+      return super.buildContext(id, registries).put(TYPE, getType()).put(TYPED_SERIALIZER, this);
     }
 
     @Override

@@ -3,9 +3,15 @@ package slimeknights.mantle.recipe.helper;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.tags.TagKey;
@@ -13,10 +19,13 @@ import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
+import slimeknights.mantle.Mantle;
+import slimeknights.mantle.data.loadable.LegacyLoadable;
 import slimeknights.mantle.data.loadable.LoadableCodec;
 import slimeknights.mantle.data.loadable.Loadables;
 import slimeknights.mantle.data.loadable.common.ItemStackLoadable;
 import slimeknights.mantle.data.loadable.common.NBTLoadable;
+import slimeknights.mantle.data.loadable.field.ContextKey;
 import slimeknights.mantle.data.loadable.field.LoadableField;
 import slimeknights.mantle.data.loadable.primitive.IntLoadable;
 import slimeknights.mantle.data.loadable.record.RecordLoadable;
@@ -112,10 +121,22 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
    * @param tag   Tag
    * @param count Stack count
    * @param nbt   Stack NBT
+   * @param patch Stack patch
+   * @return Output
+   */
+  public static ItemOutput fromTag(TagKey<Item> tag, int count, @Nullable CompoundTag nbt, DataComponentPatch patch) {
+    return new OfTagPreference(tag, count, nbt, patch);
+  }
+
+  /**
+   * Creates a new output for the given tag
+   * @param tag   Tag
+   * @param count Stack count
+   * @param nbt   Stack NBT
    * @return Output
    */
   public static ItemOutput fromTag(TagKey<Item> tag, int count, @Nullable CompoundTag nbt) {
-    return new OfTagPreference(tag, count, nbt);
+    return fromTag(tag, count, nbt, DataComponentPatch.EMPTY);
   }
 
   /**
@@ -217,6 +238,7 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
     private final int count;
     @Nullable
     private final CompoundTag nbt;
+    private final DataComponentPatch patch;
     private ItemStack cachedResult = null;
 
     @Override
@@ -232,8 +254,7 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
           return ItemStack.EMPTY;
         }
         cachedResult = new ItemStack(preference.orElseThrow(), count);
-        // TODO(neoport): 1.21 dropped ItemStack#setTag; applying legacy NBT as a DataComponentPatch needs a
-        // HolderLookup.Provider not available here. Tag-preference outputs with custom NBT no longer apply that NBT.
+        cachedResult.applyComponents(patch);
       }
       return cachedResult;
     }
@@ -289,7 +310,20 @@ public abstract class ItemOutput implements Supplier<ItemStack> {
         if (readCount) {
           count = IntLoadable.FROM_ONE.getOrDefault(json, "count", 1, context);
         }
-        return fromTag(tag, count, NBTLoadable.ALLOW_STRING.getOrDefault(json, "nbt", null));
+        CompoundTag nbt = NBTLoadable.ALLOW_STRING.getOrDefault(json, "nbt", null);
+        DataComponentPatch patch = DataComponentPatch.EMPTY;
+        if (nbt != null) {
+          HolderLookup.Provider registries = context.get(ContextKey.REGISTRIES);
+          DynamicOps<Tag> ops = registries != null ? registries.createSerializationContext(NbtOps.INSTANCE) : NbtOps.INSTANCE;
+          DataResult<DataComponentPatch> result = DataComponentPatch.CODEC.parse(ops, nbt);
+          result.error().ifPresent(err ->
+            Mantle.logger.error("Failed to parse item output nbt {} for tag {}{}: {}", nbt, tag.location(), LegacyLoadable.whileParsing(context), err.message()));
+          if (registries == null) {
+            Mantle.logger.warn("Parsing item output nbt {} for tag {} without registry access; registry-referencing components (enchantments, potions, etc.) will not resolve", nbt, tag.location());
+          }
+          patch = result.result().orElse(DataComponentPatch.EMPTY);
+        }
+        return fromTag(tag, count, nbt, patch);
       }
       return fromStack(stack.deserialize(json, context));
     }
